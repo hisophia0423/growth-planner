@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>하루 성장 플래너 — AI Agent</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/dist/tabler-icons.min.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#f5f4f0;color:#1a1a18;min-height:100vh;padding:20px}
+  .wrap{max-width:680px;margin:0 auto}
+
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .header h1{font-size:20px;font-weight:600}
+  .header p{font-size:12px;color:#9b9b97;margin-top:3px}
+  .date-badge{font-size:12px;color:#6b6b67;background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:20px;padding:5px 12px;white-space:nowrap}
+
+  .tabs{display:flex;gap:3px;background:#eeecea;border-radius:12px;padding:3px;margin-bottom:16px}
+  .tab{flex:1;padding:8px 6px;text-align:center;font-size:13px;font-weight:500;border-radius:9px;cursor:pointer;color:#6b6b67;transition:all .15s;user-select:none}
+  .tab.active{background:#fff;color:#1a1a18;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .panel{display:none}.panel.active{display:block}
+
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .stat-card{background:#fff;border:0.5px solid rgba(0,0,0,.08);border-radius:10px;padding:11px 10px;text-align:center}
+  .stat-num{font-size:22px;font-weight:600}
+  .stat-lbl{font-size:10px;color:#9b9b97;margin-top:2px}
+
+  .card{background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .sec-label{font-size:10px;font-weight:600;color:#9b9b97;letter-spacing:.07em;text-transform:uppercase;margin-bottom:11px}
+
+  .add-grid{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:8px}
+  .add-grid2{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
+  input[type=text],input[type=date],select{padding:9px 12px;border:0.5px solid rgba(0,0,0,.15);border-radius:8px;font-size:13px;background:#f8f7f3;color:#1a1a18;outline:none;width:100%;font-family:inherit}
+  input[type=text]:focus,input[type=date]:focus,select:focus{border-color:#378ADD;box-shadow:0 0 0 2px #E6F1FB}
+  select{cursor:pointer}
+  .btn-add{padding:9px 16px;background:#1a1a18;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit}
+  .btn-add:hover{background:#333}
+  .btn-add:active{transform:scale(.97)}
+
+  .filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+  .fp{font-size:11px;padding:4px 11px;border:0.5px solid rgba(0,0,0,.12);border-radius:20px;cursor:pointer;color:#6b6b67;background:#f5f4f0;transition:all .15s;user-select:none}
+  .fp.active{background:#1a1a18;color:#fff;border-color:#1a1a18}
+  .fp.fw.active{background:#185FA5;border-color:#185FA5}
+  .fp.fs.active{background:#3B6D11;border-color:#3B6D11}
+  .fp.fh.active{background:#993C1D;border-color:#993C1D}
+  .fp.fp2.active{background:#534AB7;border-color:#534AB7}
+
+  .task-list{display:flex;flex-direction:column;gap:6px}
+  .task-item{display:grid;grid-template-columns:20px 1fr auto auto;align-items:center;gap:8px;padding:10px 13px;background:#f8f7f3;border:0.5px solid rgba(0,0,0,.08);border-radius:9px;transition:border-color .15s}
+  .task-item:hover{border-color:rgba(0,0,0,.18)}
+  .task-item.done{opacity:.4}
+  .task-item.done .task-text{text-decoration:line-through}
+  .task-item.overdue{border-color:#F09595;background:#FFF8F8}
+  .chk{width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(0,0,0,.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s;flex-shrink:0}
+  .chk.on{background:#1a1a18;border-color:#1a1a18;color:#fff}
+  .task-body{min-width:0}
+  .task-text{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .task-meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
+  .cat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .cat-lbl{font-size:10px}
+  .due-tag{font-size:10px;color:#9b9b97}
+  .due-soon{color:#854F0B}
+  .due-over{color:#A32D2D;font-weight:600}
+  .pri-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+  .btn-del{background:none;border:none;cursor:pointer;color:#9b9b97;font-size:13px;padding:3px 5px;border-radius:5px;line-height:1;transition:all .15s}
+  .btn-del:hover{background:#FCEBEB;color:#A32D2D}
+  .empty-hint{text-align:center;padding:28px;color:#9b9b97;font-size:13px}
+
+  /* Pomodoro */
+  .pomo-modes{display:flex;gap:5px;justify-content:center;margin-bottom:18px}
+  .mb{font-size:12px;padding:6px 14px;border:0.5px solid rgba(0,0,0,.18);border-radius:20px;cursor:pointer;background:#f5f4f0;color:#6b6b67;transition:all .15s;font-family:inherit}
+  .mb.active{background:#1a1a18;color:#fff;border-color:#1a1a18}
+  .pomo-center-wrap{text-align:center;padding:4px 0 10px}
+  .pomo-ring-wrap{position:relative;width:154px;height:154px;margin:0 auto 16px}
+  .pomo-ring-wrap svg{transform:rotate(-90deg)}
+  .ring-bg{fill:none;stroke:#eeecea;stroke-width:9}
+  .ring-fg{fill:none;stroke:#378ADD;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .5s linear}
+  .ring-fg.rest{stroke:#1D9E75}
+  .pomo-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .pomo-big{font-size:32px;font-weight:600;letter-spacing:-1px}
+  .pomo-lbl{font-size:11px;color:#9b9b97;margin-top:2px}
+  .pomo-btns{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+  .pc{padding:8px 20px;border:0.5px solid rgba(0,0,0,.18);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#1a1a18;transition:all .15s;min-width:76px;font-family:inherit}
+  .pc:hover{background:#f5f4f0}
+  .pc.start-btn{background:#1a1a18;color:#fff;border-color:#1a1a18}
+  .pomo-dots{display:flex;gap:5px;justify-content:center;margin-bottom:6px}
+  .pd{width:9px;height:9px;border-radius:50%;background:#eeecea;border:0.5px solid rgba(0,0,0,.1);transition:all .3s}
+  .pd.on{background:#378ADD;border-color:#378ADD}
+  .pomo-count{font-size:12px;color:#6b6b67;margin-bottom:10px}
+  .pomo-tip{background:#f8f7f3;border-radius:9px;padding:11px 13px;font-size:12px;color:#6b6b67;line-height:1.65;text-align:left}
+
+  /* Chart */
+  .bars-wrap{display:flex;align-items:flex-end;gap:8px;height:95px;margin-bottom:5px}
+  .bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;transition:height .4s ease}
+  .bar.today{background:#378ADD}
+  .bar.past{background:#B5D4F4}
+  .bpct{font-size:10px;color:#6b6b67;font-weight:500}
+  .bday{font-size:10px;color:#9b9b97}
+  .bday.today{color:#1a1a18;font-weight:600}
+  .chart-legend{display:flex;gap:12px;justify-content:center;margin-top:8px}
+  .leg{display:flex;align-items:center;gap:4px;font-size:11px;color:#6b6b67}
+  .leg-dot{width:8px;height:8px;border-radius:2px}
+  .ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .ach{background:#f8f7f3;border-radius:9px;padding:11px 13px}
+  .ach-lbl{font-size:10px;color:#9b9b97;margin-bottom:3px}
+  .ach-val{font-size:19px;font-weight:600}
+  .ach-sub{font-size:11px;color:#6b6b67;margin-top:2px}
+
+  /* AI */
+  .ai-row{display:flex;gap:6px}
+  .ai-row input{flex:1;padding:9px 12px;border:0.5px solid rgba(0,0,0,.15);border-radius:8px;font-size:13px;background:#f8f7f3;color:#1a1a18;outline:none;font-family:inherit}
+  .ai-row input:focus{border-color:#378ADD;box-shadow:0 0 0 2px #E6F1FB}
+  .btn-ask{padding:9px 16px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:inherit}
+  .btn-ask:hover{background:#185FA5}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .chip{font-size:11px;padding:4px 11px;border:0.5px solid rgba(0,0,0,.12);border-radius:20px;cursor:pointer;color:#6b6b67;background:#f5f4f0;transition:all .15s;user-select:none}
+  .chip:hover{background:#E6F1FB;color:#185FA5;border-color:#B5D4F4}
+  .ai-bubble{margin-top:11px;padding:13px 15px;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:10px;font-size:13px;line-height:1.75;color:#1a1a18;display:none;white-space:pre-wrap}
+  .ai-bubble.show{display:block}
+  .thinking{color:#9b9b97;font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="header">
+  <div>
+    <h1>하루 성장 플래너</h1>
+    <p>AI 기반 업무 &amp; 일정 관리 Agent</p>
+  </div>
+  <div class="date-badge" id="date-badge"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="sw('tasks')">📋 할일</div>
+  <div class="tab" onclick="sw('pomo')">🍅 뽀모도로</div>
+  <div class="tab" onclick="sw('report')">📊 리포트</div>
+  <div class="tab" onclick="sw('ai')">✦ AI 코치</div>
+</div>
+
+<!-- 할일 탭 -->
+<div class="panel active" id="panel-tasks">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">전체</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-done" style="color:#1D9E75">0</div><div class="stat-lbl">완료</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-high" style="color:#A32D2D">0</div><div class="stat-lbl">긴급</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-over" style="color:#E24B4A">0</div><div class="stat-lbl">마감 초과</div></div>
+  </div>
+  <div class="card">
+    <div class="sec-label">할일 추가</div>
+    <div class="add-grid">
+      <input type="text" id="t-inp" placeholder="할일을 입력하세요..." style="grid-column:1/4"/>
+    </div>
+    <div class="add-grid2">
+      <select id="t-cat">
+        <option value="work">💼 업무</option>
+        <option value="study">📚 학습</option>
+        <option value="health">🏃 건강</option>
+        <option value="personal">✨ 개인</option>
+      </select>
+      <select id="t-pri">
+        <option value="high">🔴 긴급</option>
+        <option value="mid" selected>🟡 보통</option>
+        <option value="low">🔵 여유</option>
+      </select>
+      <input type="date" id="t-due" style="width:auto"/>
+    </div>
+    <button class="btn-add" onclick="addTask()" style="width:100%;margin-top:6px">+ 할일 추가</button>
+  </div>
+  <div class="card">
+    <div class="sec-label">필터</div>
+    <div class="filter-row">
+      <div class="fp active" onclick="setFilter('all',this)">전체</div>
+      <div class="fp fw" onclick="setFilter('work',this)">💼 업무</div>
+      <div class="fp fs" onclick="setFilter('study',this)">📚 학습</div>
+      <div class="fp fh" onclick="setFilter('health',this)">🏃 건강</div>
+      <div class="fp fp2" onclick="setFilter('personal',this)">✨ 개인</div>
+      <div class="fp" onclick="setFilter('overdue',this)" style="margin-left:auto">⚠️ 마감 초과</div>
+    </div>
+    <div class="task-list" id="task-list">
+      <div class="empty-hint">할일을 추가해보세요 ✦</div>
+    </div>
+  </div>
+</div>
+
+<!-- 뽀모도로 탭 -->
+<div class="panel" id="panel-pomo">
+  <div class="card">
+    <div class="pomo-modes">
+      <button class="mb active" id="mb-focus" onclick="setMode('focus')">집중 25분</button>
+      <button class="mb" id="mb-short" onclick="setMode('short')">휴식 5분</button>
+      <button class="mb" id="mb-long" onclick="setMode('long')">긴 휴식 15분</button>
+    </div>
+    <div class="pomo-center-wrap">
+      <div class="pomo-ring-wrap">
+        <svg width="154" height="154" viewBox="0 0 154 154">
+          <circle class="ring-bg" cx="77" cy="77" r="65"/>
+          <circle class="ring-fg" id="ring-fg" cx="77" cy="77" r="65" stroke-dasharray="408" stroke-dashoffset="0"/>
+        </svg>
+        <div class="pomo-overlay">
+          <div class="pomo-big" id="p-time">25:00</div>
+          <div class="pomo-lbl" id="p-lbl">집중 시간</div>
+        </div>
+      </div>
+      <div class="pomo-btns">
+        <button class="pc start-btn" id="p-btn" onclick="pomoToggle()">시작</button>
+        <button class="pc" onclick="pomoReset()">초기화</button>
+      </div>
+      <div class="pomo-dots" id="p-dots"></div>
+      <div class="pomo-count" id="p-count">오늘 완료: 0회 🍅</div>
+    </div>
+    <div class="pomo-tip" id="p-tip">💡 뽀모도로 기법: 25분 집중 → 5분 휴식을 반복합니다. 4회 완료 후 15분 긴 휴식을 취하세요. 한 번에 하나의 할일에만 집중하는 것이 핵심입니다.</div>
+  </div>
+</div>
+
+<!-- 리포트 탭 -->
+<div class="panel" id="panel-report">
+  <div class="card">
+    <div class="sec-label">주간 완료율</div>
+    <div class="bars-wrap" id="chart-bars"></div>
+    <div style="display:flex;justify-content:space-between" id="chart-days"></div>
+    <div class="chart-legend">
+      <div class="leg"><div class="leg-dot" style="background:#378ADD"></div>오늘</div>
+      <div class="leg"><div class="leg-dot" style="background:#B5D4F4"></div>이전</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sec-label">성취 요약</div>
+    <div class="ach-grid">
+      <div class="ach"><div class="ach-lbl">오늘 완료</div><div class="ach-val" id="a-today">0개</div><div class="ach-sub" id="a-rate">완료율 0%</div></div>
+      <div class="ach"><div class="ach-lbl">주요 카테고리</div><div class="ach-val" id="a-cat">-</div><div class="ach-sub">가장 많이 완료</div></div>
+      <div class="ach"><div class="ach-lbl">주간 뽀모도로</div><div class="ach-val" id="a-pomo">0회</div><div class="ach-sub">총 집중 시간</div></div>
+      <div class="ach"><div class="ach-lbl">마감일 준수율</div><div class="ach-val" id="a-due">100%</div><div class="ach-sub">기한 내 완료 비율</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- AI 코치 탭 -->
+<div class="panel" id="panel-ai">
+  <div class="card">
+    <div class="sec-label">AI 코치에게 물어보기</div>
+    <div class="ai-row">
+      <input type="text" id="ai-inp" placeholder="오늘 할일 우선순위 정해줘, 집중이 안 돼..."/>
+      <button class="btn-ask" onclick="askAI()">질문 ↗</button>
+    </div>
+    <div class="chips">
+      <span class="chip" onclick="setQ('오늘 할일 중 우선순위를 정리해줘')">우선순위 정리</span>
+      <span class="chip" onclick="setQ('마감일이 임박한 일부터 처리하는 방법 알려줘')">마감 관리 팁</span>
+      <span class="chip" onclick="setQ('오늘 완료한 일을 보고 피드백 해줘')">하루 피드백</span>
+      <span class="chip" onclick="setQ('집중이 안 될 때 어떻게 하면 좋아?')">집중력 팁</span>
+      <span class="chip" onclick="setQ('내 할일 목록으로 오늘 하루 타임테이블을 짜줘')">타임테이블 작성</span>
+      <span class="chip" onclick="setQ('업무 스트레스를 줄이는 방법 알려줘')">스트레스 관리</span>
+    </div>
+    <div class="ai-bubble" id="ai-bubble"></div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+const CAT={work:{label:'업무',color:'#185FA5',bg:'#E6F1FB'},study:{label:'학습',color:'#3B6D11',bg:'#EAF3DE'},health:{label:'건강',color:'#993C1D',bg:'#FAECE7'},personal:{label:'개인',color:'#534AB7',bg:'#EEEDFE'}};
+const PRI={high:{label:'긴급',bg:'#FCEBEB',color:'#A32D2D'},mid:{label:'보통',bg:'#FAEEDA',color:'#854F0B'},low:{label:'여유',bg:'#E6F1FB',color:'#185FA5'}};
+const DAYS=['월','화','수','목','금','토','일'];
+const todayIdx=(new Date().getDay()+6)%7;
+
+let tasks=[],pomoCount=0,weekPomo=0,activeFilter='all';
+let weekData=[65,55,80,45,70,0,0];
+weekData[todayIdx]=0;
+
+const MODES={focus:{sec:25*60,lbl:'집중 시간'},short:{sec:5*60,lbl:'짧은 휴식'},long:{sec:15*60,lbl:'긴 휴식'}};
+let mode='focus',rem=25*60,running=false,timer=null;
+const CIRC=2*Math.PI*65;
+
+document.getElementById('date-badge').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+
+function sw(t){
+  const keys=['tasks','pomo','report','ai'];
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',keys[i]===t));
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='report')renderReport();
+}
+
+function addTask(){
+  const inp=document.getElementById('t-inp');
+  const txt=inp.value.trim();if(!txt)return;
+  tasks.push({id:Date.now(),text:txt,cat:document.getElementById('t-cat').value,pri:document.getElementById('t-pri').value,due:document.getElementById('t-due').value,done:false});
+  inp.value='';document.getElementById('t-due').value='';
+  render();stats();
+}
+
+function toggleTask(id){const t=tasks.find(t=>t.id===id);if(!t)return;t.done=!t.done;render();stats();}
+function delTask(id){tasks=tasks.filter(t=>t.id!==id);render();stats();}
+
+function isOverdue(t){
+  if(!t.due||t.done)return false;
+  return new Date(t.due)<new Date(new Date().toDateString());
+}
+function dueDays(due){
+  if(!due)return null;
+  return Math.round((new Date(due)-new Date(new Date().toDateString()))/(86400000));
+}
+
+function setFilter(f,el){
+  activeFilter=f;
+  document.querySelectorAll('.fp').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');render();
+}
+
+function render(){
+  const list=document.getElementById('task-list');
+  let filtered=tasks;
+  if(activeFilter==='overdue')filtered=tasks.filter(t=>isOverdue(t));
+  else if(activeFilter!=='all')filtered=tasks.filter(t=>t.cat===activeFilter);
+  const sorted=[...filtered].sort((a,b)=>{
+    if(a.done!==b.done)return a.done?1:-1;
+    if(isOverdue(a)!==isOverdue(b))return isOverdue(a)?-1:1;
+    return {high:0,mid:1,low:2}[a.pri]-{high:0,mid:1,low:2}[b.pri];
+  });
+  if(!sorted.length){list.innerHTML='<div class="empty-hint">할일이 없습니다 ✦</div>';return;}
+  list.innerHTML=sorted.map(t=>{
+    const c=CAT[t.cat],p=PRI[t.pri],od=isOverdue(t),dd=dueDays(t.due);
+    let dueHtml='';
+    if(t.due){
+      if(od)dueHtml=`<span class="due-tag due-over">⚠ 마감 초과</span>`;
+      else if(dd===0)dueHtml=`<span class="due-tag due-soon">📅 오늘 마감</span>`;
+      else if(dd===1)dueHtml=`<span class="due-tag due-soon">📅 내일 마감</span>`;
+      else if(dd>0)dueHtml=`<span class="due-tag">📅 ${dd}일 후</span>`;
+    }
+    return `<div class="task-item${t.done?' done':''}${od?' overdue':''}">
+      <div class="chk${t.done?' on':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
+      <div class="task-body">
+        <div class="task-text">${t.text}</div>
+        <div class="task-meta">
+          <div class="cat-dot" style="background:${c.color}"></div>
+          <span class="cat-lbl" style="color:${c.color}">${c.label}</span>
+          ${dueHtml}
+        </div>
+      </div>
+      <span class="pri-badge" style="background:${p.bg};color:${p.color}">${p.label}</span>
+      <button class="btn-del" onclick="delTask(${t.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function stats(){
+  const done=tasks.filter(t=>t.done).length;
+  document.getElementById('s-total').textContent=tasks.length;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-high').textContent=tasks.filter(t=>t.pri==='high'&&!t.done).length;
+  document.getElementById('s-over').textContent=tasks.filter(t=>isOverdue(t)).length;
+  weekData[todayIdx]=tasks.length?Math.round(done/tasks.length*100):0;
+}
+
+function setMode(m){
+  if(running)return;
+  mode=m;rem=MODES[m].sec;
+  document.querySelectorAll('.mb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mb-'+m).classList.add('active');
+  document.getElementById('ring-fg').className='ring-fg'+(m!=='focus'?' rest':'');
+  updatePomo();
+}
+
+function updatePomo(){
+  document.getElementById('p-time').textContent=String(Math.floor(rem/60)).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
+  document.getElementById('p-lbl').textContent=MODES[mode].lbl;
+  document.getElementById('ring-fg').style.strokeDashoffset=CIRC*(1-rem/MODES[mode].sec);
+}
+
+function pomoToggle(){
+  if(!running){
+    running=true;
+    const btn=document.getElementById('p-btn');
+    btn.textContent='일시정지';btn.classList.remove('start-btn');
+    timer=setInterval(()=>{
+      rem--;updatePomo();
+      if(rem<=0){
+        clearInterval(timer);running=false;
+        btn.textContent='시작';btn.classList.add('start-btn');
+        if(mode==='focus'){
+          pomoCount++;weekPomo++;
+          document.getElementById('p-count').textContent=`오늘 완료: ${pomoCount}회 🍅`;
+          renderDots();
+          document.getElementById('p-tip').textContent=pomoCount%4===0?'🎉 4회 완료! 15분 긴 휴식을 취하세요. 충분한 휴식이 다음 집중을 더 깊게 만듭니다.':'✅ 집중 완료! 5분 휴식을 취하세요. 스트레칭이나 물 한 잔을 권장합니다.';
+        } else {
+          document.getElementById('p-tip').textContent='💪 휴식 완료! 다시 집중 모드로 돌아가세요. 할 일을 하나 골라 시작해보세요.';
+        }
+      }
+    },1000);
+  } else {
+    clearInterval(timer);running=false;
+    const btn=document.getElementById('p-btn');
+    btn.textContent='재개';btn.classList.add('start-btn');
+  }
+}
+
+function pomoReset(){
+  clearInterval(timer);running=false;rem=MODES[mode].sec;
+  const btn=document.getElementById('p-btn');btn.textContent='시작';btn.classList.add('start-btn');
+  updatePomo();
+}
+
+function renderDots(){
+  document.getElementById('p-dots').innerHTML=Array.from({length:8},(_,i)=>`<div class="pd${i<pomoCount?' on':''}"></div>`).join('');
+}
+updatePomo();renderDots();
+
+function renderReport(){
+  const done=tasks.filter(t=>t.done).length;
+  weekData[todayIdx]=tasks.length?Math.round(done/tasks.length*100):0;
+  const maxV=Math.max(...weekData,10);
+  document.getElementById('chart-bars').innerHTML=weekData.map((v,i)=>`
+    <div class="bc">
+      <div class="bpct">${v}%</div>
+      <div class="bar ${i===todayIdx?'today':'past'}" style="height:${Math.round(v/maxV*78)+4}px"></div>
+    </div>`).join('');
+  document.getElementById('chart-days').innerHTML=DAYS.map((d,i)=>`<div style="flex:1;text-align:center;font-size:10px;color:${i===todayIdx?'#1a1a18':'#9b9b97'};font-weight:${i===todayIdx?'600':'400'}">${d}</div>`).join('');
+  document.getElementById('a-today').textContent=done+'개';
+  document.getElementById('a-rate').textContent='완료율 '+(tasks.length?Math.round(done/tasks.length*100):0)+'%';
+  const cc={};tasks.filter(t=>t.done).forEach(t=>cc[t.cat]=(cc[t.cat]||0)+1);
+  const top=Object.entries(cc).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('a-cat').textContent=top?CAT[top[0]].label:'-';
+  document.getElementById('a-pomo').textContent=weekPomo+'회';
+  const wd=tasks.filter(t=>t.due&&t.done).length,ov=tasks.filter(t=>isOverdue(t)).length;
+  document.getElementById('a-due').textContent=(wd+ov>0?Math.round(wd/(wd+ov)*100):100)+'%';
+}
+
+function setQ(q){document.getElementById('ai-inp').value=q;}
+async function askAI(){
+  const inp=document.getElementById('ai-inp');
+  const q=inp.value.trim();if(!q)return;
+  const bubble=document.getElementById('ai-bubble');
+  bubble.className='ai-bubble show';
+  bubble.innerHTML='<span class="thinking">AI 코치가 생각 중...</span>';
+  const summary=tasks.length===0?'등록된 할일 없음':tasks.map(t=>`- [${t.done?'완료':'미완'}] ${t.text} | ${CAT[t.cat].label} | ${PRI[t.pri].label}${t.due?` | 마감:${t.due}`:''}`).join('\n');
+  const sys=`당신은 개인 생산성 코치 AI입니다. 사용자의 할일 목록과 현황을 바탕으로 실용적이고 따뜻한 한국어 조언을 2~4문장으로 제공합니다.
+
+오늘 날짜: ${new Date().toLocaleDateString('ko-KR')}
+뽀모도로 완료: ${pomoCount}회 | 누적: ${weekPomo}회
+완료율: ${tasks.length?Math.round(tasks.filter(t=>t.done).length/tasks.length*100):0}%
+마감 초과: ${tasks.filter(t=>isOverdue(t)).length}개
+
+할일 목록:
+${summary}`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content:q}]})
+    });
+    const data=await res.json();
+    bubble.textContent=data.content?.map(c=>c.text||'').join('')||'응답을 받지 못했습니다.';
+  }catch(e){bubble.textContent='연결 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';}
+  inp.value='';
+}
+
+document.getElementById('t-inp').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
+document.getElementById('ai-inp').addEventListener('keydown',e=>{if(e.key==='Enter')askAI();});
+</script>
+</body>
+</html>
